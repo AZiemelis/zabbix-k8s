@@ -7,7 +7,7 @@
 - The deployment includes a Zabbix server, Zabbix frontend, PostgreSQL database, SNMP simulation, and a Zabbix proxy.
 - SNMP simulation is deployed in a single pod alongside the Zabbix proxy to simulate network devices for monitoring.
 
-![docs/img.png](img.png)
+![Project diagram](docs/img.png)
 
 ## Project Structure
 
