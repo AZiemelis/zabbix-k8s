@@ -1,0 +1,10 @@
+# Intellij
+/.idea
+*.iml
+
+# MacOS
+.DS*
+
+#Some stuff
+.vscode
+.devcontainer

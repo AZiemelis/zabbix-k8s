@@ -1,0 +1,112 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zabbix-server
+  namespace: monitoring
+  labels:
+    app: zabbix-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: zabbix-server
+  template:
+    metadata:
+      labels:
+        app: zabbix-server
+    spec:
+      containers:
+        - name: zabbix-server
+          image: zabbix/zabbix-server-pgsql:ubuntu-7.0.16
+          ports:
+            - containerPort: 10051
+              name: zabbix-server
+              protocol: TCP
+          env:
+            - name: DB_SERVER_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: DB_SERVER_HOST
+            - name: DB_SERVER_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: DB_SERVER_PORT
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: POSTGRES_DB
+            - name: ZBX_NODEADDRESS
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: ZBX_WEBSERVICEURL
+              valueFrom:
+                configMapKeyRef:
+                  name: zabbix-config
+                  key: ZBX_WEBSERVICEURL
+        - name: zabbix-agent
+          image: zabbix/zabbix-agent:ubuntu-7.0.16
+          ports:
+            - containerPort: 10050
+              name: zabbix-agent
+              protocol: TCP
+          env:
+            - name: ZBX_HOSTNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: zabbix-config
+                  key: ZBX_HOSTNAME
+            - name: ZBX_SERVER_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: zabbix-config
+                  key: ZBX_AGENT_SERVER_HOST
+            - name: ZBX_SERVER_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: zabbix-config
+                  key: ZBX_SERVER_PORT
+            - name: ZBX_PASSIVE_ALLOW
+              value: "true"
+            - name: ZBX_PASSIVESERVERS
+            - name: ZBX_ACTIVE_ALLOW
+              value: "false"
+            - name: ZBX_ACTIVESERVERS
+            - name: ZBX_DEBUGLEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: zabbix-config
+                  key: ZBX_DEBUGLEVEL
+            - name: ZBX_TIMEOUT
+              value: "4"
+            - name: ZBX_LOADMODULE
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zabbix-server
+  namespace: monitoring
+spec:
+  selector:
+    app: zabbix-server
+  ports:
+    - name: zabbix-server
+      nodePort: 31057
+      port: 10051
+      protocol: TCP
+      targetPort: 10051
+  type: LoadBalancer

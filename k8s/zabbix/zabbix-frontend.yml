@@ -1,0 +1,65 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zabbix-web
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: zabbix-web
+  template:
+    metadata:
+      labels:
+        app: zabbix-web
+    spec:
+      containers:
+        - name: zabbix-web-nginx-pgsql
+          image: zabbix/zabbix-web-nginx-pgsql:ubuntu-7.0.16
+          ports:
+            - containerPort: 8080
+              name: zabbix-web
+              protocol: TCP
+          env:
+            - name: DB_SERVER_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: DB_SERVER_HOST
+            - name: DB_SERVER_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: DB_SERVER_PORT
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: POSTGRES_DB
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zabbix-web
+  namespace: monitoring
+spec:
+  selector:
+    app: zabbix-web
+  ports:
+    - name: zabbix-web
+      nodePort: 31088
+      port: 80
+      protocol: TCP
+      targetPort: 8080
+  type: LoadBalancer

@@ -1,0 +1,88 @@
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: zabbix-postgresql
+  namespace: monitoring
+spec:
+  volumeClaimTemplates:
+    - metadata:
+        name: postgresql-data
+      spec:
+        accessModes:
+          - ReadWriteMany
+        resources:
+          requests:
+            storage: 2Gi
+  replicas: 1
+  selector:
+    matchLabels:
+      app: zabbix-postgresql
+  template:
+    metadata:
+      labels:
+        app: zabbix-postgresql
+    spec:
+      containers:
+        - name: zabbix-postgresql
+          image: postgres:16
+          args:
+            - -c
+            - max_connections=100
+          ports:
+            - containerPort: 5432
+              name: db
+              protocol: TCP
+          env:
+            - name: DB_SERVER_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: DB_SERVER_HOST
+            - name: DB_SERVER_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: DB_SERVER_PORT
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  key: POSTGRES_USER
+                  name: secrets
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: POSTGRES_PASSWORD
+                  name: secrets
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: POSTGRES_DB
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - name: postgresql-data
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: postgresql-data
+          persistentVolumeClaim:
+            claimName: postgresql-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zabbix-postgresql
+  namespace: monitoring
+  labels:
+    app: zabbix-postgresql
+spec:
+  type: LoadBalancer
+  ports:
+    - name: db
+      nodePort: 32334
+      port: 5432
+      protocol: TCP
+      targetPort: 5432
+  selector:
+    app: zabbix-postgresql
